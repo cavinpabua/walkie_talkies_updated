@@ -12,14 +12,15 @@
 #define UDP_BROADCAST_PORT 3444
 #define AUDIO_BUFFER_MAX 8192
 
-//#define SERIAL_DEBUG_ON true
+#define SERIAL_DEBUG_ON true
 
 #define AUDIO_TIMING_VAL 125 /* 8,000 hz */
 //#define AUDIO_TIMING_VAL 62 /* 16,000 hz */
 //#define AUDIO_TIMING_VAL 50  /* 20,000 hz */
 
 UDP Udp;
-IPAddress broadcastAddress(255,255,255,255);
+//IPAddress broadcastAddress(255,255,255,255);
+IPAddress broadcastAddress(172,20,10,13);
 
 int audioStartIdx = 0, audioEndIdx = 0;
 int rxBufferLen = 0, rxBufferIdx = 0;
@@ -41,6 +42,8 @@ unsigned long lastRead = micros();
 unsigned long lastSend = millis();
 char myIpAddress[24];
 
+bool nowRecording = false;
+
 TCPClient audioClient;
 TCPClient checkClient;
 TCPServer audioServer = TCPServer(BROADCAST_PORT);
@@ -50,7 +53,6 @@ IntervalTimer readMicTimer;
 float _volumeRatio = 0.25;
 int _sendBufferLength = 0;
 unsigned int lastPublished = 0;
-
 
 void setup() {
     #if SERIAL_DEBUG_ON
@@ -63,6 +65,8 @@ void setup() {
     pinMode(D7, OUTPUT);
 
     Particle.function("setVolume", onSetVolume);
+    Particle.function("record", recordToggle);
+
 
     Particle.variable("ipAddress", myIpAddress, STRING);
     IPAddress myIp = WiFi.localIP();
@@ -111,16 +115,22 @@ void stopRecording() {
 }
 
 void loop() {
-//    checkClient = audioServer.available();
-//    if (checkClient.connected()) {
-//        audioClient = checkClient;
-//    }
+    checkClient = audioServer.available();
+
+    if (checkClient.connected()) {
+      #if SERIAL_DEBUG_ON
+      Serial.println("Client connected!");
+      #endif
+        audioClient = checkClient;
+    }
 
     //listen for 100ms, taking a sample every 125us,
     //and then send that chunk over the network.
     //listenAndSend(100);
 
     if (digitalRead(BUTTON_PIN) == HIGH) {
+//    if (nowRecording) {
+
         digitalWrite(D7, HIGH);
         startRecording();
         sendEvery(100);
@@ -138,6 +148,22 @@ void loop() {
 int onSetVolume(String cmd) {
     _volumeRatio = cmd.toFloat() / 100;
 }
+
+int recordToggle(String command) {
+    if (command=="on") {
+        nowRecording = true;
+        return 1;
+    }
+    else if (command=="off") {
+        nowRecording = false;
+        return 0;
+    }
+    else {
+        nowRecording = false;
+        return 0;
+    }
+}
+
 
 void readAndPlay() {
 
@@ -325,9 +351,9 @@ void copyAudio(uint8_t *bufferPtr) {
 
 // Callback for Timer 1
 void sendAudio(void) {
-//    #if SERIAL_DEBUG_ON
-//        Serial.println("sendAudio");
-//    #endif
+    #if SERIAL_DEBUG_ON
+        Serial.println("SENDING");
+    #endif
 
     copyAudio(txBuffer);
 
@@ -353,6 +379,10 @@ void sendAudio(void) {
 
 
 void write_socket(TCPClient socket, uint8_t *buffer) {
+    #if SERIAL_DEBUG_ON
+        Serial.println("    TCP: " + String(_sendBufferLength));
+    #endif
+
     int i=0;
     uint16_t val = 0;
 
@@ -390,7 +420,7 @@ void write_UDP(uint8_t *buffer) {
 //        ;
 //    }
     #if SERIAL_DEBUG_ON
-        Serial.println("SENDING " + String(stopIndex));
+        Serial.println("    UDP: " + String(stopIndex));
     #endif
     Udp.sendPacket(buffer, stopIndex, broadcastAddress, UDP_BROADCAST_PORT);
 
