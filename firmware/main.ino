@@ -112,22 +112,16 @@ void stopRecording() {
 }
 
 void loop() {
-    checkClient = audioServer.available();
-
-    if (checkClient.connected()) {
-      #if SERIAL_DEBUG_ON
-      Serial.println("Client connected!");
-      #endif
-        audioClient = checkClient;
-    }
+//    checkClient = audioServer.available();    
+//    if (checkClient.connected()) {
+//        audioClient = checkClient;
+//    }
 
     //listen for 100ms, taking a sample every 125us,
     //and then send that chunk over the network.
     //listenAndSend(100);
 
     if (digitalRead(BUTTON_PIN) == HIGH) {
-//    if (nowRecording) {
-
         digitalWrite(D7, HIGH);
         startRecording();
         sendEvery(100);
@@ -146,22 +140,6 @@ int onSetVolume(String cmd) {
     _volumeRatio = cmd.toFloat() / 100;
 }
 
-int recordToggle(String command) {
-    if (command=="on") {
-        nowRecording = true;
-        return 1;
-    }
-    else if (command=="off") {
-        nowRecording = false;
-        return 0;
-    }
-    else {
-        nowRecording = false;
-        return 0;
-    }
-}
-
-
 void readAndPlay() {
 
 
@@ -178,13 +156,13 @@ void readAndPlay() {
 
 
 
-//    #if SERIAL_DEBUG_ON
-//        Serial.println("received " + String(count));
-//    #endif
+    //    #if SERIAL_DEBUG_ON
+    //        Serial.println("received " + String(count));
+    //    #endif
 
-//    //read as much as we can off the buffer.
-//    rxBufferLen = Udp.read(rxBuffer, AUDIO_BUFFER_MAX);
-//    rxBufferIdx = 0;
+    //    //read as much as we can off the buffer.
+    //    rxBufferLen = Udp.read(rxBuffer, AUDIO_BUFFER_MAX);
+    //    rxBufferIdx = 0;
 
     playRxAudio();
 }
@@ -250,16 +228,13 @@ void listenAndSend(int delay) {
 }
 
 void sendEvery(int delay) {
-
-//    #if SERIAL_DEBUG_ON
-//        Serial.println("sendEvery");
-//    #endif
+    //    #if SERIAL_DEBUG_ON
+    //        Serial.println("sendEvery");
+    //    #endif
 
     // if it's been longer than 100ms since our last broadcast, then broadcast.
     if ((millis() - lastSend) >= delay) {
-
         sendAudio();
-
         lastSend = millis();
     }
 }
@@ -271,43 +246,42 @@ void readMic(void) {
     value = map(value, 0, 4095, 0, 255);
     audio_buffer.put(value);
 
-//old
-//    if (audioEndIdx >= AUDIO_BUFFER_MAX) {
-//        audioEndIdx = 0;
-//    }
-//    audioBuffer[audioEndIdx++] = value;
+    //old
+    //    if (audioEndIdx >= AUDIO_BUFFER_MAX) {
+    //        audioEndIdx = 0;
+    //    }
+    //    audioBuffer[audioEndIdx++] = value;
 
 
-//    //play audio
-//    value = map(recv_buffer.get(), 0, 255, 0, 4095);
-//    if (value >= 0) {
-//        analogWrite(SPEAKER_PIN, value);
-//    }
+    //    //play audio
+    //    value = map(recv_buffer.get(), 0, 255, 0, 4095);
+    //    if (value >= 0) {
+    //        analogWrite(SPEAKER_PIN, value);
+    //    }
 
 
-//    //play audio
-//    if (rxBufferIdx < rxBufferLen) {
-//
-////        uint8_t lsb = rxBuffer[rxBufferIdx];
-////        uint8_t msb = rxBuffer[rxBufferIdx+1];
-////        rxBufferIdx +=2;
-////        uint16_t value = ((msb << 8) | (lsb & 0xFF));
-////        value = (value / 65536.0) * 4095.0;
-////        analogWrite(SPEAKER_PIN, value);
-//
-//        //tcpBuffer[tcpIdx] = map(val, 0, 4095, 0, 255);
-//        analogWrite(SPEAKER_PIN, rxBuffer[rxBufferIdx++]);
-//    }
-    //digitalWrite(D7, (led_state) ? HIGH : LOW);
+    //    //play audio
+    //    if (rxBufferIdx < rxBufferLen) {
+    //
+    ////        uint8_t lsb = rxBuffer[rxBufferIdx];
+    ////        uint8_t msb = rxBuffer[rxBufferIdx+1];
+    ////        rxBufferIdx +=2;
+    ////        uint16_t value = ((msb << 8) | (lsb & 0xFF));
+    ////        value = (value / 65536.0) * 4095.0;
+    ////        analogWrite(SPEAKER_PIN, value);
+    //
+    //        //tcpBuffer[tcpIdx] = map(val, 0, 4095, 0, 255);
+    //        analogWrite(SPEAKER_PIN, rxBuffer[rxBufferIdx++]);
+    //    }
+        //digitalWrite(D7, (led_state) ? HIGH : LOW);
 
-//    if (rxBufferIdx < rxBufferLen) {
-//        int value = map(rxBuffer[rxBufferIdx++], 0, 255, 0, 4095);
-//        analogWrite(SPEAKER_PIN, value);
-//    }
+    //    if (rxBufferIdx < rxBufferLen) {
+    //        int value = map(rxBuffer[rxBufferIdx++], 0, 255, 0, 4095);
+    //        analogWrite(SPEAKER_PIN, value);
+    //    }
 }
 
 void copyAudio(uint8_t *bufferPtr) {
-
     int c = 0;
     while ((audio_buffer.getSize() > 0) && (c < AUDIO_BUFFER_MAX)) {
         bufferPtr[c++] = audio_buffer.get();
@@ -349,13 +323,16 @@ void copyAudio(uint8_t *bufferPtr) {
 // Callback for Timer 1
 void sendAudio(void) {
     #if SERIAL_DEBUG_ON
-        Serial.println("SENDING");
+        Serial.println("sendAudio size:");
+        Serial.println(_sendBufferLength);
     #endif
+
 
     copyAudio(txBuffer);
 
     int i=0;
     uint16_t val = 0;
+
 
 
     if (audioClient.connected()) {
@@ -376,15 +353,16 @@ void sendAudio(void) {
 
 
 void write_socket(TCPClient socket, uint8_t *buffer) {
-    #if SERIAL_DEBUG_ON
-        Serial.println("    TCP: " + String(_sendBufferLength));
-    #endif
-
     int i=0;
     uint16_t val = 0;
 
     int tcpIdx = 0;
     uint8_t tcpBuffer[1024];
+
+    #if SERIAL_DEBUG_ON
+        Serial.println("SENDING (TCP)");
+    #endif
+
 
     while( (val = buffer[i++]) < 65535 ) {
         if ((tcpIdx+1) >= 1024) {
@@ -417,7 +395,7 @@ void write_UDP(uint8_t *buffer) {
 //        ;
 //    }
     #if SERIAL_DEBUG_ON
-        Serial.println("    UDP: " + String(stopIndex));
+        Serial.println("SENDING (UDP) " + String(stopIndex));
     #endif
     Udp.sendPacket(buffer, stopIndex, broadcastAddress, UDP_BROADCAST_PORT);
 
