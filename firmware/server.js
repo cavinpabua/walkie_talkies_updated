@@ -1,145 +1,61 @@
-// make sure you have Node.js Installed!
-// Get the IP address of your photon, and put it here:
+var fs = require('fs');
+var wav = require('wav');
+var dgram = require('dgram');
+var chalk = require('chalk');
+var server = dgram.createSocket('udp4');
 
-// CLI command to get your photon's IP address
-//
-// particle get MY_DEVICE_NAME ipAddress
+var d = new Date();
+var currentTime = `${d.getDate()}-${d.getMonth()}-${d.getFullYear()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}`;
+var bufferArray = [];
 
-// Put your IP here!
 var settings = {
-  IP: "172.20.10.2",
-  selfIP: "172.20.10.13",
-  UDPPort: 3444,
-  TCPPort: 3443,
-  method: 'TCP'
+  UDPPort: 3444
 };
 
-/**
- * Created by middleca on 7/18/15.
- */
+console.log( '\n' +
+chalk.red(',d88b.d88b,     ,d88b.d88b,      ,d88b.d88b,   ') + '\n' +
+chalk.red('88888888888     88888888888      88888888888   ') + '\n' +
+chalk.red('`Y8888888Y´     `Y8888888Y´      `Y8888888Y´   ') + '\n' +
+chalk.red('  `Y888Y´         `Y888Y´          `Y888Y´     ') + '\n' +
+chalk.red('    `Y´             `Y´              `Y´       ') + '\n\n');
+console.log(
+  '  ' + chalk.red.bold('Welcome to the intimacy_device prototype') + '\n' + 
+  '  ' + '========================================\n' +
+  '  Once this server is running, the device \n' +
+  '  can be used to record messages and they \n' +
+  '  will be saved to the recordings folder.\n' + '\n' +
+  '  ' + chalk.underline('Status:')
+  );
 
-//based on a sample from here
-//  http://stackoverflow.com/questions/19548755/nodejs-write-binary-data-into-writablestream-with-buffer
-
-var fs = require("fs");
-
-var samplesLength = 1000;
-var sampleRate = 8000;
-
-var outStream = fs.createWriteStream("test2.wav");
-
-var writeHeader = function() {
-  var b = new Buffer(1024);
-  b.write('RIFF', 0);
-  /* file length */
-  b.writeUInt32LE(32 + samplesLength * 2, 4);
-  //b.writeUint32LE(0, 4);
-
-  b.write('WAVE', 8);
-  /* format chunk identifier */
-  b.write('fmt ', 12);
-
-  /* format chunk length */
-  b.writeUInt32LE(16, 16);
-
-  /* sample format (raw) */
-  b.writeUInt16LE(1, 20);
-
-  /* channel count */
-  b.writeUInt16LE(1, 22);
-
-  /* sample rate */
-  b.writeUInt32LE(sampleRate, 24);
-
-  /* byte rate (sample rate * block align) */
-  b.writeUInt32LE(sampleRate * 2, 28);
-
-  /* block align (channel count * bytes per sample) */
-  b.writeUInt16LE(2, 32);
-
-  /* bits per sample */
-  b.writeUInt16LE(16, 34);
-
-  /* data chunk identifier */
-  b.write('data', 36);
-
-  /* data chunk length */
-  //b.writeUInt32LE(40, samplesLength * 2);
-  b.writeUInt32LE(0, 40);
-
-
-  outStream.write(b.slice(0, 50));
-};
-
-
-
-
-
-writeHeader(outStream);
-
-
-console.log('Connecting via '+ settings.method +':');
-
-if (settings.method == 'UDP') {
-  var dgram = require('dgram');
-  var server = dgram.createSocket('udp4');
-
-  server.on('listening', function () {
-    try {
-      console.log('listening');
-      var address = server.address();
-      console.log('UDP Server listening on ' + address.address + ":" + address.port);
-    } catch(e) {
-      console.log(e);
-    }
-  });
-
-  server.on('message', function (message, remote) {
-    try {
-       outStream.write(message);
-    } catch(e) {
-      console.log(e);
-    }
-  });
-  server.bind(settings.UDPPort, settings.selfIP);
-
-} else if (settings.method = 'TCP') {
-  var net = require('net');
-
-  client = net.connect(settings.TCPPort, settings.IP, function () {
-    console.log('Connected, now sampling.');
-    client.setNoDelay(true);
-
-      client.on("message", function (message) {
-        console.log("GOT DATA");
-          try {
-            outStream.write(data);
-            //outStream.flush();
-            console.log("got chunk of " + data.toString('hex'));
-          }
-          catch (ex) {
-              console.error("Er!" + ex);
-          }
-      });
-  });
-
-}
-
-
-
-
-
-
-
-
-setTimeout(function() {
-  console.log('recorded for 10 seconds');
-  if (settings.method == 'UDP') {
-    server.close();  
-  } else {
-    client.end();   
+server.on('listening', function () {
+  try {    
+    console.log(chalk.yellow('•') + ' Connected, waiting for user to record...');
+  } catch(e) {
+    console.log(e);
   }
+});
 
-  outStream.end();
-  process.exit(0);
-}, 20 * 1000);
+server.on('message', function (message, remote) {  
+  if(Buffer.from('start').compare(message) === 0) {
+    console.log(chalk.yellow('•') +' Now recording...');
+  } else if(Buffer.from('end').compare(message) === 0) {
+    console.log(chalk.yellow('•')+' Recording ended, now converting...');
+    var buff = Buffer.concat(bufferArray);
+    var writer = new wav.FileWriter(`../recordings/recording ${currentTime}.wav`, {
+      channels: 1,
+      sampleRate: 8000,
+      bitDepth: 8
+    });
+    writer.write(buff);
+    writer.end();
+    server.close();  
+    console.log(chalk.green('•') + ' ' + chalk.green(`All done! See "recording ${currentTime}.wav"`));
+  } else {
+    try {
+      bufferArray.push(message);
+    } catch(e) {
+      console.log(e);
+    }
+  }
+});
+server.bind(settings.UDPPort);
