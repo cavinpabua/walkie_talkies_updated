@@ -20,7 +20,7 @@
 
 UDP Udp;
 //IPAddress broadcastAddress(255,255,255,255);
-IPAddress broadcastAddress(172,20,10,13);
+IPAddress broadcastAddress(192,168,1,37);
 
 int audioStartIdx = 0, audioEndIdx = 0;
 int rxBufferLen = 0, rxBufferIdx = 0;
@@ -41,8 +41,6 @@ SimpleRingBuffer recv_buffer;
 unsigned long lastRead = micros();
 unsigned long lastSend = millis();
 char myIpAddress[24];
-
-bool nowRecording = false;
 
 TCPClient audioClient;
 TCPClient checkClient;
@@ -65,8 +63,6 @@ void setup() {
     pinMode(D7, OUTPUT);
 
     Particle.function("setVolume", onSetVolume);
-    Particle.function("record", recordToggle);
-
 
     Particle.variable("ipAddress", myIpAddress, STRING);
     IPAddress myIp = WiFi.localIP();
@@ -98,8 +94,8 @@ void setup() {
 
 bool _isRecording = false;
 void startRecording() {
-
     if (!_isRecording) {
+        Udp.sendPacket("start", 5, broadcastAddress, UDP_BROADCAST_PORT);
         // 1/8000th of a second is 125 microseconds
         readMicTimer.begin(readMic, AUDIO_TIMING_VAL, uSec);
     }
@@ -110,6 +106,7 @@ void startRecording() {
 void stopRecording() {
     if (_isRecording) {
         readMicTimer.end();
+        Udp.sendPacket("end", 3, broadcastAddress, UDP_BROADCAST_PORT);
     }
     _isRecording = false;
 }
