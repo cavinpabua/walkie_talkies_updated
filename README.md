@@ -1,6 +1,10 @@
 INTIMACY_DEVICE
 ====
 
-> Particle Photon powered IxD project
+> Particle Photon powered IxD bachelor thesis prototype
 
-Software based on [Walkie_Talkies](https://github.com/dmiddlecamp/walkie_talkies) by [David Middlecamp](https://github.com/dmiddlecamp/).
+![Screenshot of server script](/screenshot.jpg?raw=true "Screenshot of server script")
+
+More info to come.
+
+Firmware is based on [Walkie_Talkies](https://github.com/dmiddlecamp/walkie_talkies) by [David Middlecamp](https://github.com/dmiddlecamp/).
