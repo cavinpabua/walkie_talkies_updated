@@ -3,7 +3,7 @@ INTIMACY_DEVICE
 
 > Particle Photon powered IxD bachelor thesis prototype
 
-![Screenshot of server script](/screenshot.jpg?raw=true "Screenshot of server script")
+![Screenshot of server script](/screenshot.png?raw=true "Screenshot of server script")
 
 More info to come.
 
