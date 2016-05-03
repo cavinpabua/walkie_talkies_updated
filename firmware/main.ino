@@ -11,11 +11,12 @@
 #define BROADCAST_PORT 3443
 #define UDP_BROADCAST_PORT 3444
 #define AUDIO_BUFFER_MAX 8192
+//#define AUDIO_BUFFER_MAX 16384
 
-#define SERIAL_DEBUG_ON true
+ #define SERIAL_DEBUG_ON true
 
-#define AUDIO_TIMING_VAL 125 /* 8,000 hz */
-//#define AUDIO_TIMING_VAL 62 /* 16,000 hz */
+//#define AUDIO_TIMING_VAL 125 /* 8,000 hz */
+#define AUDIO_TIMING_VAL 62 /* 16,000 hz */
 //#define AUDIO_TIMING_VAL 50  /* 20,000 hz */
 
 UDP Udp;
@@ -42,9 +43,10 @@ unsigned long lastRead = micros();
 unsigned long lastSend = millis();
 char myIpAddress[24];
 
-TCPClient audioClient;
-TCPClient checkClient;
-TCPServer audioServer = TCPServer(BROADCAST_PORT);
+
+// TCPClient audioClient;
+// TCPClient checkClient;
+// TCPServer audioServer = TCPServer(BROADCAST_PORT);
 
 IntervalTimer readMicTimer;
 //int led_state = 0;
@@ -55,6 +57,7 @@ unsigned int lastPublished = 0;
 void setup() {
     #if SERIAL_DEBUG_ON
     Serial.begin(115200);
+
     #endif
 
     pinMode(MICROPHONE_PIN, INPUT);
@@ -63,6 +66,7 @@ void setup() {
     pinMode(D7, OUTPUT);
 
     Particle.function("setVolume", onSetVolume);
+//    Particle.function("readMessage", onReadMessage);
 
     Particle.variable("ipAddress", myIpAddress, STRING);
     IPAddress myIp = WiFi.localIP();
@@ -73,7 +77,6 @@ void setup() {
 
     Udp.setBuffer(1024);
     Udp.begin(UDP_BROADCAST_PORT);
-
 
 //    Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
 //    Udp.write(rxBuffer, 10);
@@ -87,7 +90,7 @@ void setup() {
     // // send a chunk of audio every 1/2 second
     // sendAudioTimer.begin(sendAudio, 1000, hmSec);
 
-    audioServer.begin();
+//    audioServer.begin();
 
     lastRead = micros();
 }
@@ -112,14 +115,6 @@ void stopRecording() {
 }
 
 void loop() {
-//    checkClient = audioServer.available();    
-//    if (checkClient.connected()) {
-//        audioClient = checkClient;
-//    }
-
-    //listen for 100ms, taking a sample every 125us,
-    //and then send that chunk over the network.
-    //listenAndSend(100);
 
     if (digitalRead(BUTTON_PIN) == HIGH) {
         digitalWrite(D7, HIGH);
@@ -131,8 +126,7 @@ void loop() {
         stopRecording();
     }
 
-    readAndPlay();
-    //led_state = !led_state;
+    receiveMessages();
 }
 
 
@@ -140,20 +134,20 @@ int onSetVolume(String cmd) {
     _volumeRatio = cmd.toFloat() / 100;
 }
 
-void readAndPlay() {
+void receiveMessages() {
 
-
-    while (Udp.parsePacket() > 0) {
-       while (Udp.available() > 0) {
-            recv_buffer.put(Udp.read());
-       }
-       if (recv_buffer.getSize() == 0) {
-           analogWrite(SPEAKER_PIN, 0);
-       }
-    }
-
-
-
+//    if (Udp.parsePacket()) {
+//        bool unreadMessage = true;
+//    }
+     while (Udp.parsePacket() > 0) {
+        while (Udp.available() > 0) {
+             recv_buffer.put(Udp.read());
+        }
+        if (recv_buffer.getSize() == 0) {
+            analogWrite(SPEAKER_PIN, 0);
+        }
+     }
+//    notifyAboutUnreadMessages();
 
 
     //    #if SERIAL_DEBUG_ON
@@ -165,6 +159,20 @@ void readAndPlay() {
     //    rxBufferIdx = 0;
 
     playRxAudio();
+}
+
+void notifyAboutUnreadMessages() {
+    // if (unreadMessage) {
+    //     digitalWrite(D7, HIGH); delay(100);
+    //     digitalWrite(D7, LOW);  delay(300);
+    //     digitalWrite(D7, HIGH); delay(100);
+    //     digitalWrite(D7, LOW);  delay(300);
+    //     digitalWrite(D7, HIGH); delay(100);
+    //     digitalWrite(D7, LOW);  delay(300);
+    //     digitalWrite(D7, HIGH); delay(100);
+    //     digitalWrite(D7, LOW);  delay(300);
+    //     delay(1000);
+    // }
 }
 
 void playRxAudio() {
@@ -335,12 +343,12 @@ void sendAudio(void) {
 
 
 
-    if (audioClient.connected()) {
-       write_socket(audioClient, txBuffer);
-    }
-    else {
+//    if (audioClient.connected()) {
+//       write_socket(audioClient, txBuffer);
+//    }
+//    else {
         write_UDP(txBuffer);
-    }
+//    }
     // else {
     //     while( (val = txBuffer[i++]) < 65535 ) {
     //         Serial.print(val);
@@ -383,17 +391,17 @@ void write_socket(TCPClient socket, uint8_t *buffer) {
 
 void write_UDP(uint8_t *buffer) {
     int stopIndex=_sendBufferLength;
-//    uint16_t val = 0;
+    //    uint16_t val = 0;
 
-//    int tcpIdx = 0;
-//    uint8_t tcpBuffer[1024];
-
-
+    //    int tcpIdx = 0;
+    //    uint8_t tcpBuffer[1024];
 
 
-//    while (( buffer[stopIndex++] < 4096 ) && (stopIndex < AUDIO_BUFFER_MAX)) {
-//        ;
-//    }
+
+
+    //    while (( buffer[stopIndex++] < 4096 ) && (stopIndex < AUDIO_BUFFER_MAX)) {
+    //        ;
+    //    }
     #if SERIAL_DEBUG_ON
         Serial.println("SENDING (UDP) " + String(stopIndex));
     #endif
@@ -401,53 +409,53 @@ void write_UDP(uint8_t *buffer) {
 
     //Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
 
-//    while( (val = buffer[i++]) < 4096 ) {
-//        if ((tcpIdx+1) >= 1024) {
-//
-//            //works
-////            Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
-////            Udp.write(tcpBuffer, tcpIdx);
-////            Udp.endPacket();
-//
-//            //Doesn't work
-//            Udp.sendPacket(tcpBuffer, tcpIdx, broadcastAddress, UDP_BROADCAST_PORT);
-//
-//
-//            #if SERIAL_DEBUG_ON
-//            Serial.println("SENT " + String(tcpIdx));
-//            #endif
-//            //delay(5);
-//
-//
-//            tcpIdx = 0;
-//            toggleLED();
-//        }
-//
-//        //map(value, fromLow, fromHigh, toLow, toHigh);
-//        tcpBuffer[tcpIdx] = val; //map(val, 0, 4095, 0, 255);
-//        tcpIdx++;
-//
-////        tcpBuffer[tcpIdx] = val & 0xff;
-////        tcpBuffer[tcpIdx+1] = (val >> 8);
-////        tcpIdx += 2;
-//    }
-//
-//    // any leftovers?
-//    if (tcpIdx > 0) {
-//        //works
-////        Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
-////        Udp.write(tcpBuffer, tcpIdx);
-////        Udp.endPacket();
-//
-//        //doesn't work
-//        Udp.sendPacket(tcpBuffer, tcpIdx, broadcastAddress, UDP_BROADCAST_PORT);
-//
-//        #if SERIAL_DEBUG_ON
-//        Serial.println("SENT " + String(tcpIdx));
-//        #endif
-//    }
+    //    while( (val = buffer[i++]) < 4096 ) {
+    //        if ((tcpIdx+1) >= 1024) {
+    //
+    //            //works
+    ////            Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
+    ////            Udp.write(tcpBuffer, tcpIdx);
+    ////            Udp.endPacket();
+    //
+    //            //Doesn't work
+    //            Udp.sendPacket(tcpBuffer, tcpIdx, broadcastAddress, UDP_BROADCAST_PORT);
+    //
+    //
+    //            #if SERIAL_DEBUG_ON
+    //            Serial.println("SENT " + String(tcpIdx));
+    //            #endif
+    //            //delay(5);
+    //
+    //
+    //            tcpIdx = 0;
+    //            toggleLED();
+    //        }
+    //
+    //        //map(value, fromLow, fromHigh, toLow, toHigh);
+    //        tcpBuffer[tcpIdx] = val; //map(val, 0, 4095, 0, 255);
+    //        tcpIdx++;
+    //
+    ////        tcpBuffer[tcpIdx] = val & 0xff;
+    ////        tcpBuffer[tcpIdx+1] = (val >> 8);
+    ////        tcpIdx += 2;
+    //    }
+    //
+    //    // any leftovers?
+    //    if (tcpIdx > 0) {
+    //        //works
+    ////        Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
+    ////        Udp.write(tcpBuffer, tcpIdx);
+    ////        Udp.endPacket();
+    //
+    //        //doesn't work
+    //        Udp.sendPacket(tcpBuffer, tcpIdx, broadcastAddress, UDP_BROADCAST_PORT);
+    //
+    //        #if SERIAL_DEBUG_ON
+    //        Serial.println("SENT " + String(tcpIdx));
+    //        #endif
+    //    }
 
-    //toggleLED();
+        //toggleLED();
 }
 
 bool ledState = false;
