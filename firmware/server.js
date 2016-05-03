@@ -2,8 +2,9 @@ var fs = require('fs');
 var wav = require('wav');
 var dgram = require('dgram');
 var chalk = require('chalk');
-var server = dgram.createSocket('udp4');
+var Speaker = require('speaker');
 
+var server = dgram.createSocket('udp4');
 var d = new Date();
 var currentTime = `${d.getDate()}-${d.getMonth()}-${d.getFullYear()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}`;
 var bufferArray = [];
@@ -41,15 +42,17 @@ server.on('message', function (message, remote) {
   } else if(Buffer.from('end').compare(message) === 0) {
     console.log(chalk.yellow('•')+' Recording ended, now converting...');
     var buff = Buffer.concat(bufferArray);
-    var writer = new wav.FileWriter(`../recordings/recording ${currentTime}.wav`, {
+    var filename = `recording ${currentTime}.wav`;
+    var writer = new wav.FileWriter(`recordings/${filename}`, {
       channels: 1,
       sampleRate: 8000,
       bitDepth: 8
     });
     writer.write(buff);
     writer.end();
-    server.close();  
-    console.log(chalk.green('•') + ' ' + chalk.green(`All done! See "recording ${currentTime}.wav"`));
+    console.log(chalk.green('•') + ' ' + chalk.green(`Recording done!`));
+    playRecording(`recordings/${filename}`);
+    notifyPartner(remote);
   } else {
     try {
       bufferArray.push(message);
@@ -59,3 +62,23 @@ server.on('message', function (message, remote) {
   }
 });
 server.bind(settings.UDPPort);
+
+function playRecording (filename) {
+  console.log(chalk.green('•') + ` Playing '${filename}' 🔈`);
+  var recording = fs.createReadStream(`recordings/${filename}`);
+  var reader = new wav.Reader();
+  reader.on('format', function(format){
+    reader.pipe(new Speaker(format));
+  });
+recording.pipe(reader);
+}
+
+function notifyPartner(remote) {
+  console.log(chalk.yellow('•')+' Preparing to notify partner about new message...');
+  setTimeout(function(){
+    server.send(Buffer.from('new-msg'), remote.port, remote.address, function(){
+      console.log(chalk.green('•')+' Notification sent...');
+      server.close();
+    });
+  }, 2000);
+}
