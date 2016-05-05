@@ -61,8 +61,7 @@ bool _readyToReceive = true;
 
 void setup() {
     #if SERIAL_DEBUG_ON
-    Serial.begin(115200);
-
+        Serial.begin(115200);
     #endif
 
     pinMode(MICROPHONE_PIN, INPUT);
@@ -82,7 +81,7 @@ void setup() {
 
     recv_buffer.init(AUDIO_BUFFER_MAX);
     audio_buffer.init(AUDIO_BUFFER_MAX);
-
+    
     Udp.setBuffer(1024);
     Udp.begin(UDP_BROADCAST_PORT);
 
@@ -211,12 +210,14 @@ void playRxAudio() {
 	unsigned long now, diff;
 	int value;
 
-	//toggleLED();
-
 	//noInterrupts();
 
     //while (rxBufferIdx < rxBufferLen) {
     while (recv_buffer.getSize() > 0) {
+        #if SERIAL_DEBUG_ON
+            Serial.print("buffer: ");
+            Serial.print(recv_buffer.getSize());
+        #endif
 
         // ---
         //map it back from 1 byte to 2 bytes
@@ -227,6 +228,11 @@ void playRxAudio() {
         value = recv_buffer.get();
         value = map(value, 0, 255, 0, 4095);
         value = value * _volumeRatio;
+
+        #if SERIAL_DEBUG_ON
+            Serial.print("Playing (value:" + String(value) + ")");
+        #endif
+
 
         now = micros();
         diff = (now - lastWrite);
@@ -240,8 +246,6 @@ void playRxAudio() {
     }
 
     //interrupts();
-
-    //toggleLED();
 }
 
 
@@ -267,10 +271,6 @@ void listenAndSend(int delay) {
 }
 
 void sendEvery(int delay) {
-    //    #if SERIAL_DEBUG_ON
-    //        Serial.println("sendEvery");
-    //    #endif
-
     // if it's been longer than 100ms since our last broadcast, then broadcast.
     if ((millis() - lastSend) >= delay) {
         sendAudio();
@@ -326,171 +326,18 @@ void copyAudio(uint8_t *bufferPtr) {
         bufferPtr[c++] = audio_buffer.get();
     }
     _sendBufferLength = c - 1;
-
-
-
-//    //if end is after start, read from start->end
-//    //if end is before start, then we wrapped, read from start->max, 0->end
-//
-//    int endSnapshotIdx = audioEndIdx;
-//    bool wrapped = endSnapshotIdx < audioStartIdx;
-//    int endIdx = (wrapped) ? AUDIO_BUFFER_MAX : endSnapshotIdx;
-//
-//
-//    for(int i=audioStartIdx;i<endIdx;i++) {
-//        // do a thing
-//        bufferPtr[c++] = audioBuffer[i];
-//    }
-//
-//    if (wrapped) {
-//        //we have extra
-//        for(int i=0;i<endSnapshotIdx;i++) {
-//            // do more of a thing.
-//            bufferPtr[c++] = audioBuffer[i];
-//        }
-//    }
-//
-//    //and we're done.
-//    audioStartIdx = audioEndIdx;
-//
-//    if (c < AUDIO_BUFFER_MAX) {
-//        bufferPtr[c] = -1;
-//    }
-//    _sendBufferLength = c;
 }
 
-// Callback for Timer 1
 void sendAudio(void) {
-    #if SERIAL_DEBUG_ON
-        Serial.println("sendAudio size:");
-        Serial.println(_sendBufferLength);
-    #endif
-
-
     copyAudio(txBuffer);
-
-    int i=0;
-    uint16_t val = 0;
-
-
-
-//    if (audioClient.connected()) {
-//       write_socket(audioClient, txBuffer);
-//    }
-//    else {
-        write_UDP(txBuffer);
-//    }
-    // else {
-    //     while( (val = txBuffer[i++]) < 65535 ) {
-    //         Serial.print(val);
-    //         Serial.print(',');
-    //     }
-    //     Serial.println("DONE");
-    // }
-
+    write_UDP(txBuffer);
 }
 
-
-void write_socket(TCPClient socket, uint8_t *buffer) {
-    int i=0;
-    uint16_t val = 0;
-
-    int tcpIdx = 0;
-    uint8_t tcpBuffer[1024];
-
-    #if SERIAL_DEBUG_ON
-        Serial.println("SENDING (TCP)");
-    #endif
-
-
-    while( (val = buffer[i++]) < 65535 ) {
-        if ((tcpIdx+1) >= 1024) {
-            socket.write(tcpBuffer, tcpIdx);
-            tcpIdx = 0;
-        }
-
-        tcpBuffer[tcpIdx] = val & 0xff;
-        tcpBuffer[tcpIdx+1] = (val >> 8);
-        tcpIdx += 2;
-    }
-
-    // any leftovers?
-    if (tcpIdx > 0) {
-        socket.write(tcpBuffer, tcpIdx);
-    }
-}
 
 void write_UDP(uint8_t *buffer) {
     int stopIndex=_sendBufferLength;
-    //    uint16_t val = 0;
-
-    //    int tcpIdx = 0;
-    //    uint8_t tcpBuffer[1024];
-
-
-
-
-    //    while (( buffer[stopIndex++] < 4096 ) && (stopIndex < AUDIO_BUFFER_MAX)) {
-    //        ;
-    //    }
     #if SERIAL_DEBUG_ON
         Serial.println("SENDING (UDP) " + String(stopIndex));
     #endif
     Udp.sendPacket(buffer, stopIndex, broadcastAddress, UDP_BROADCAST_PORT);
-
-    //Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
-
-    //    while( (val = buffer[i++]) < 4096 ) {
-    //        if ((tcpIdx+1) >= 1024) {
-    //
-    //            //works
-    ////            Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
-    ////            Udp.write(tcpBuffer, tcpIdx);
-    ////            Udp.endPacket();
-    //
-    //            //Doesn't work
-    //            Udp.sendPacket(tcpBuffer, tcpIdx, broadcastAddress, UDP_BROADCAST_PORT);
-    //
-    //
-    //            #if SERIAL_DEBUG_ON
-    //            Serial.println("SENT " + String(tcpIdx));
-    //            #endif
-    //            //delay(5);
-    //
-    //
-    //            tcpIdx = 0;
-    //            toggleLED();
-    //        }
-    //
-    //        //map(value, fromLow, fromHigh, toLow, toHigh);
-    //        tcpBuffer[tcpIdx] = val; //map(val, 0, 4095, 0, 255);
-    //        tcpIdx++;
-    //
-    ////        tcpBuffer[tcpIdx] = val & 0xff;
-    ////        tcpBuffer[tcpIdx+1] = (val >> 8);
-    ////        tcpIdx += 2;
-    //    }
-    //
-    //    // any leftovers?
-    //    if (tcpIdx > 0) {
-    //        //works
-    ////        Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
-    ////        Udp.write(tcpBuffer, tcpIdx);
-    ////        Udp.endPacket();
-    //
-    //        //doesn't work
-    //        Udp.sendPacket(tcpBuffer, tcpIdx, broadcastAddress, UDP_BROADCAST_PORT);
-    //
-    //        #if SERIAL_DEBUG_ON
-    //        Serial.println("SENT " + String(tcpIdx));
-    //        #endif
-    //    }
-
-        //toggleLED();
-}
-
-bool ledState = false;
-void toggleLED() {
-    ledState = !ledState;
-    digitalWrite(D7, (ledState) ? HIGH : LOW);
 }
