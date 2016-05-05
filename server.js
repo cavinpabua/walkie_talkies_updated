@@ -37,8 +37,10 @@ server.on('listening', function () {
 });
 
 server.on('message', function (message, remote) {  
+  // Start of recording
   if(Buffer.from('start').compare(message) === 0) {
     console.log(chalk.yellow('•') +' Now recording...');
+    // End of recording
   } else if(Buffer.from('end').compare(message) === 0) {
     console.log(chalk.yellow('•')+' Recording ended, now converting...');
     var buff = Buffer.concat(bufferArray);
@@ -50,9 +52,12 @@ server.on('message', function (message, remote) {
     });
     writer.write(buff);
     writer.end();
-    console.log(chalk.green('•') + ' ' + chalk.green(`Recording done!`));
-    playRecording(`recordings/${filename}`);
-    notifyPartner(remote);
+    console.log(chalk.green('•') + ' ' + chalk.green(`Recording done!\n`));
+    //playRecording(filename);
+    notifyPartner(remote);  
+  } else if(Buffer.from('request-msg').compare(message) === 0) {
+    console.log(chalk.green('• Message has been requested!'));
+    sendMessage();
   } else {
     try {
       bufferArray.push(message);
@@ -70,15 +75,56 @@ function playRecording (filename) {
   reader.on('format', function(format){
     reader.pipe(new Speaker(format));
   });
-recording.pipe(reader);
+  recording.pipe(reader);
 }
 
 function notifyPartner(remote) {
   console.log(chalk.yellow('•')+' Preparing to notify partner about new message...');
   setTimeout(function(){
     server.send(Buffer.from('new-msg'), remote.port, remote.address, function(){
-      console.log(chalk.green('•')+' Notification sent...');
-      server.close();
+      console.log(chalk.green('•')+ chalk.green(' Notification sent!\n'));
+      console.log(chalk.yellow('•')+' Now waiting for user to request message...');
     });
   }, 2000);
 }
+
+function sendMessage(){
+  var recording = fs.createReadStream('recordings/440hz.wav');
+  var reader = new wav.Reader();
+  var bufferArray = [];
+
+  reader.on('format', function(format){
+    console.log(`${chalk.yellow('•')} Streaming to partner...`);
+    reader.on('readable', () => {
+      var totalBuf = reader.read();
+      console.log(totalBuf);
+      var index = 0;
+      for (var i = 0; i < Buffer.byteLength(totalBuf); i = i+1024) {
+        if(totalBuf == null) { break; }
+        bufferArray[index] = totalBuf.slice(i, i+1024);
+        sendChunk(totalBuf.slice(i, i+1024));
+        //      stream.write(totalBuf.slice(i, i+1024));
+        index++;
+      }
+    });
+  });
+  recording.pipe(reader);
+  }
+
+function sendChunk(buffer) {
+  setTimeout(function(){
+    server.send(buffer, settings.UDPPort, settings.partnerIP, function(){
+    });
+  }, 100);
+}
+
+
+//  reader.on('end')
+  // Start stream (should it run every 100ms or can it handle the entire chunk at once?)
+//  server.send(Buffer.from('test'), settings.UDPPort, settings.partnerIP, function(){
+//    server.close();
+//  });
+
+  // Tell Photon that the message is over, so we can set unreadMessage = false;
+
+  // Give feedback to user
