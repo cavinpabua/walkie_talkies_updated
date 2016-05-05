@@ -17,8 +17,8 @@
 
  #define SERIAL_DEBUG_ON true
 
-//#define AUDIO_TIMING_VAL 125 /* 8,000 hz */
-#define AUDIO_TIMING_VAL 62 /* 16,000 hz */
+#define AUDIO_TIMING_VAL 125 /* 8,000 hz */
+//#define AUDIO_TIMING_VAL 62 /* 16,000 hz */
 //#define AUDIO_TIMING_VAL 50  /* 20,000 hz */
 
 UDP Udp;
