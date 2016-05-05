@@ -72,8 +72,9 @@ void setup() {
     pinMode(D7, OUTPUT);
 
     Particle.function("setVolume", onSetVolume);
-//    Particle.function("readMessage", onReadMessage);
     Particle.function("readMessage", onReadMessage);
+    Particle.function("playMessage", onPlayMessage);
+
 
     Particle.variable("ipAddress", myIpAddress, STRING);
     IPAddress myIp = WiFi.localIP();
@@ -121,11 +122,21 @@ void stopRecording() {
     _isRecording = false;
 }
 
-void loop() {
+int onSetVolume(String cmd) {
+    _volumeRatio = cmd.toFloat() / 100;
+    return true;
+}
+
 int onReadMessage(String cmd) {
     _messageIsUnread = false;
     analogWrite(LIGHT_PIN, 0);
 }
+
+int onPlayMessage(String cmd) {
+    onReadMessage("true");
+    _readyToReceive = true;
+}
+
 
 void showNewMessage() {
     if (_messageIsUnread) {
@@ -133,6 +144,14 @@ void showNewMessage() {
         analogWrite(LIGHT_PIN, val);
     }
 }
+
+/* TODO: doneListeningToMessage()
+    _requestedMessage = false;
+    _readyToReceive = false;
+*/
+
+
+void loop() {
     if (digitalRead(BUTTON_PIN) == HIGH) {
         digitalWrite(D7, HIGH);
         startRecording();
@@ -147,27 +166,44 @@ void showNewMessage() {
     }
     showNewMessage();
 
-    receiveMessages();
+    if ( _readyToReceive ) {
+        if (!_requestedMessage) {
+           #if SERIAL_DEBUG_ON
+               Serial.println("Requesting message.");
+            #endif 
+            Udp.sendPacket("request-msg", 11, broadcastAddress, UDP_BROADCAST_PORT);        
+            _requestedMessage = true;
+        }
+        receiveMessages();
+    }
+
+
+
+
+// TODO: Enable when button is soldered on. Consider if BUTTON_PIN could somehow be utilised (short press/long press?)
+//    if(digitalRead(PLAY_BUTTON_PIN == HIGH) && (_messageIsUnread)) {
+    //    onReadMessage("true");
+    //    _readyToReceive = true;
+//    }
+
 }
 
 
-int onSetVolume(String cmd) {
-    _volumeRatio = cmd.toFloat() / 100;
-}
 
 void receiveMessages() {
-
-//    if (Udp.parsePacket()) {
-//        bool unreadMessage = true;
-//    }
      while (Udp.parsePacket() > 0) {
         while (Udp.available() > 0) {
-             recv_buffer.put(Udp.read());
+            #if SERIAL_DEBUG_ON
+                Serial.print("Recieving packet");
+            #endif
+
+            recv_buffer.put(Udp.read());
         }
         if (recv_buffer.getSize() == 0) {
             analogWrite(SPEAKER_PIN, 0);
         }
     }
+ playRxAudio();
 }
 
 void playRxAudio() {
