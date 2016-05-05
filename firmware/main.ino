@@ -2,12 +2,14 @@
 
 #include "SparkIntervalTimer.h"
 #include "SimpleRingBuffer.h"
+#include <math.h>
 
 //WiFi.selectAntenna(ANT_EXTERNAL);
 
 #define MICROPHONE_PIN DAC1
 #define SPEAKER_PIN DAC2
 #define BUTTON_PIN A0
+#define LIGHT_PIN D0
 #define BROADCAST_PORT 3443
 #define UDP_BROADCAST_PORT 3444
 #define AUDIO_BUFFER_MAX 8192
@@ -53,6 +55,9 @@ IntervalTimer readMicTimer;
 float _volumeRatio = 0.25;
 int _sendBufferLength = 0;
 unsigned int lastPublished = 0;
+bool _messageIsUnread = false;
+bool _requestedMessage = true;
+bool _readyToReceive = true;
 
 void setup() {
     #if SERIAL_DEBUG_ON
@@ -63,10 +68,12 @@ void setup() {
     pinMode(MICROPHONE_PIN, INPUT);
     pinMode(SPEAKER_PIN, OUTPUT);
     pinMode(BUTTON_PIN, INPUT_PULLDOWN);
+    pinMode(LIGHT_PIN, OUTPUT);
     pinMode(D7, OUTPUT);
 
     Particle.function("setVolume", onSetVolume);
 //    Particle.function("readMessage", onReadMessage);
+    Particle.function("readMessage", onReadMessage);
 
     Particle.variable("ipAddress", myIpAddress, STRING);
     IPAddress myIp = WiFi.localIP();
@@ -115,7 +122,17 @@ void stopRecording() {
 }
 
 void loop() {
+int onReadMessage(String cmd) {
+    _messageIsUnread = false;
+    analogWrite(LIGHT_PIN, 0);
+}
 
+void showNewMessage() {
+    if (_messageIsUnread) {
+        float val = (exp(sin(millis()/2000.0*M_PI)) - 0.36787944)*108.0;
+        analogWrite(LIGHT_PIN, val);
+    }
+}
     if (digitalRead(BUTTON_PIN) == HIGH) {
         digitalWrite(D7, HIGH);
         startRecording();
@@ -125,6 +142,10 @@ void loop() {
         digitalWrite(D7, LOW);
         stopRecording();
     }
+    if (Udp.parsePacket()) {
+        _messageIsUnread = true;
+    }
+    showNewMessage();
 
     receiveMessages();
 }
@@ -146,33 +167,7 @@ void receiveMessages() {
         if (recv_buffer.getSize() == 0) {
             analogWrite(SPEAKER_PIN, 0);
         }
-     }
-//    notifyAboutUnreadMessages();
-
-
-    //    #if SERIAL_DEBUG_ON
-    //        Serial.println("received " + String(count));
-    //    #endif
-
-    //    //read as much as we can off the buffer.
-    //    rxBufferLen = Udp.read(rxBuffer, AUDIO_BUFFER_MAX);
-    //    rxBufferIdx = 0;
-
-    playRxAudio();
-}
-
-void notifyAboutUnreadMessages() {
-    // if (unreadMessage) {
-    //     digitalWrite(D7, HIGH); delay(100);
-    //     digitalWrite(D7, LOW);  delay(300);
-    //     digitalWrite(D7, HIGH); delay(100);
-    //     digitalWrite(D7, LOW);  delay(300);
-    //     digitalWrite(D7, HIGH); delay(100);
-    //     digitalWrite(D7, LOW);  delay(300);
-    //     digitalWrite(D7, HIGH); delay(100);
-    //     digitalWrite(D7, LOW);  delay(300);
-    //     delay(1000);
-    // }
+    }
 }
 
 void playRxAudio() {
