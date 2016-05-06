@@ -73,6 +73,7 @@ void setup() {
     Particle.function("setVolume", onSetVolume);
     Particle.function("readMessage", onReadMessage);
     Particle.function("playMessage", onPlayMessage);
+    Particle.function("reset", onReset);
 
 
     Particle.variable("ipAddress", myIpAddress, STRING);
@@ -134,6 +135,12 @@ int onReadMessage(String cmd) {
 int onPlayMessage(String cmd) {
     onReadMessage("true");
     _readyToReceive = true;
+}
+
+int onReset(String cmd) {
+    onReadMessage("true");
+    _requestedMessage = false;
+    _readyToReceive = false;
 }
 
 
