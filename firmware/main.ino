@@ -42,11 +42,11 @@ char myIpAddress[24];
 
 IntervalTimer readMicTimer;
 //int led_state = 0;
-float _volumeRatio = 0.25;
+float _volumeRatio = 0.9;
 int _sendBufferLength = 0;
 unsigned int lastPublished = 0;
 bool _messageIsUnread = false;
-bool _requestedMessage = true;
+bool _requestedMessage = false;
 bool _readyToReceive = true;
 
 void setup() {
@@ -146,7 +146,7 @@ void loop() {
     if (Udp.parsePacket()) {
         _messageIsUnread = true;
     }
-    showNewMessage();
+//    showNewMessage();
 
     if ( _readyToReceive ) {
         if (!_requestedMessage) {

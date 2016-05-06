@@ -32,6 +32,7 @@ var i = 0;
 // Read wav to buffer
 reader.on('format', function(format){
   console.log(`${chalk.yellow('•')} Streaming to partner...`);
+    reader.pipe(new Speaker(format));
   reader.on('readable', () => {
     var totalBuf = reader.read();
     streamLoop(totalBuf, 1024);
@@ -53,13 +54,13 @@ function streamLoop (fullBuffer, maxChunkSize) {
   if(fullBuffer === null) { return false }
   setTimeout(function(){
       server.send(fullBuffer.slice(i, i+maxChunkSize), settings.UDPPort, settings.partnerIP, function(){
-        //console.log('chunk sent');
+        console.log(fullBuffer.slice(i, i+maxChunkSize));
       });
     i = i + maxChunkSize;
     if (i <= Buffer.byteLength(fullBuffer) ) {
       streamLoop(fullBuffer, maxChunkSize);
     }
-   }, 10);
+   }, 30);
 }
 
 

@@ -90,15 +90,15 @@ function notifyPartner(remote) {
 }
 
 function sendMessage(){
-  var recording = fs.createReadStream('recordings/440hz.wav');
+  var recording = fs.createReadStream('recordings/example.wav');
   var reader = new wav.Reader();
   var bufferArray = [];
 
   reader.on('format', function(format){
     console.log(`${chalk.yellow('•')} Streaming to partner...`);
     reader.on('readable', () => {
+      reader.pipe(new Speaker(format));
       var totalBuf = reader.read();
-      console.log(totalBuf);
       var index = 0;
       for (var i = 0; i < Buffer.byteLength(totalBuf); i = i+1024) {
         if(totalBuf == null) { break; }
@@ -114,9 +114,10 @@ function sendMessage(){
 
 function sendChunk(buffer) {
   setTimeout(function(){
+    console.log('sendChunk!');
     server.send(buffer, settings.UDPPort, settings.partnerIP, function(){
     });
-  }, 100);
+  }, 400);
 }
 
 
