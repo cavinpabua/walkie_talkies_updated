@@ -168,7 +168,7 @@ void loop() {
     if ( _readyToReceive ) {
         if (!_requestedMessage) {
            #if SERIAL_DEBUG_ON
-               Serial.println("Requesting message.");
+               Serial.print("Requesting message.");
             #endif 
             Udp.sendPacket("request-msg", 11, broadcastAddress, UDP_BROADCAST_PORT);        
             _requestedMessage = true;
@@ -192,10 +192,6 @@ void loop() {
 void receiveMessages() {
      while (Udp.parsePacket() > 0) {
         while (Udp.available() > 0) {
-            #if SERIAL_DEBUG_ON
-                Serial.print("Recieving packet");
-            #endif
-
             recv_buffer.put(Udp.read());
         }
         if (recv_buffer.getSize() == 0) {
@@ -214,11 +210,6 @@ void playRxAudio() {
 
     //while (rxBufferIdx < rxBufferLen) {
     while (recv_buffer.getSize() > 0) {
-        #if SERIAL_DEBUG_ON
-            Serial.print("buffer: ");
-            Serial.print(recv_buffer.getSize());
-        #endif
-
         // ---
         //map it back from 1 byte to 2 bytes
         //map(value, fromLow, fromHigh, toLow, toHigh);
@@ -228,11 +219,6 @@ void playRxAudio() {
         value = recv_buffer.get();
         value = map(value, 0, 255, 0, 4095);
         value = value * _volumeRatio;
-
-        #if SERIAL_DEBUG_ON
-            Serial.print("Playing (value:" + String(value) + ")");
-        #endif
-
 
         now = micros();
         diff = (now - lastWrite);
