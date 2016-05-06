@@ -27,30 +27,15 @@ var stream = udp({
 var recording = fs.createReadStream('recordings/example.wav');
 var reader = new wav.Reader();
 var bufferArray = [];
+var i = 0;
 
 // Read wav to buffer
 reader.on('format', function(format){
   console.log(`${chalk.yellow('•')} Streaming to partner...`);
   reader.on('readable', () => {
     var totalBuf = reader.read();
-    console.log(totalBuf);
-    var index = 0;
-    for (var i = 0; i < Buffer.byteLength(totalBuf); i = i+1024) {
-      if(totalBuf == null) { break; }
-      bufferArray[index] = totalBuf.slice(i, i+1024);
-//      sendStream(totalBuf.slice(i, i+1024));
-      stream.write(totalBuf.slice(i, i+1024));
-      index++;
-    }
-      });
-
-    function sendStream(buffer) {
-      setTimeout(function(){
-        server.send(buffer, settings.UDPPort, settings.partnerIP, function(){
-        });
-      }, 100);
-    }
-
+    streamLoop(totalBuf, 1024);
+  });
 
 //  reader.on('end')
   // Start stream (should it run every 100ms or can it handle the entire chunk at once?)
@@ -63,6 +48,19 @@ reader.on('format', function(format){
   // Give feedback to user
   console.log(chalk.green('•')+' Message sent');
 });
+
+function streamLoop (fullBuffer, maxChunkSize) {
+   setTimeout(function(){
+      server.send(fullBuffer.slice(i, i+maxChunkSize), settings.UDPPort, settings.partnerIP, function(){
+        //console.log('chunk sent');
+      });
+    i = i + maxChunkSize;
+    if (i <= Buffer.byteLength(fullBuffer) && fullBuffer !== null) {
+      streamLoop(fullBuffer, maxChunkSize);
+    }
+   }, 10);
+}
+
 
 //stream.pipe(process.stdout);
 //pipe whatever is received on stdin over udp
