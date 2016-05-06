@@ -50,12 +50,13 @@ reader.on('format', function(format){
 });
 
 function streamLoop (fullBuffer, maxChunkSize) {
-   setTimeout(function(){
+  if(fullBuffer === null) { return false }
+  setTimeout(function(){
       server.send(fullBuffer.slice(i, i+maxChunkSize), settings.UDPPort, settings.partnerIP, function(){
         //console.log('chunk sent');
       });
     i = i + maxChunkSize;
-    if (i <= Buffer.byteLength(fullBuffer) && fullBuffer !== null) {
+    if (i <= Buffer.byteLength(fullBuffer) ) {
       streamLoop(fullBuffer, maxChunkSize);
     }
    }, 10);
