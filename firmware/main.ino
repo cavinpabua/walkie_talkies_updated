@@ -4,13 +4,11 @@
 #include "SimpleRingBuffer.h"
 #include <math.h>
 
-//WiFi.selectAntenna(ANT_EXTERNAL);
 
 #define MICROPHONE_PIN DAC1
 #define SPEAKER_PIN DAC2
 #define BUTTON_PIN A0
 #define LIGHT_PIN D0
-#define BROADCAST_PORT 3443
 #define UDP_BROADCAST_PORT 3444
 #define AUDIO_BUFFER_MAX 8192
 //#define AUDIO_BUFFER_MAX 16384
@@ -36,19 +34,11 @@ uint8_t txBuffer[AUDIO_BUFFER_MAX];
 SimpleRingBuffer audio_buffer;
 SimpleRingBuffer recv_buffer;
 
-
-// IntervalTimer readMicTimer;
-// IntervalTimer sendAudioTimer;
-
 // version without timers
 unsigned long lastRead = micros();
 unsigned long lastSend = millis();
 char myIpAddress[24];
 
-
-// TCPClient audioClient;
-// TCPClient checkClient;
-// TCPServer audioServer = TCPServer(BROADCAST_PORT);
 
 IntervalTimer readMicTimer;
 //int led_state = 0;
@@ -85,20 +75,6 @@ void setup() {
     
     Udp.setBuffer(1024);
     Udp.begin(UDP_BROADCAST_PORT);
-
-//    Udp.beginPacket(broadcastAddress, UDP_BROADCAST_PORT);
-//    Udp.write(rxBuffer, 10);
-//    Udp.endPacket();
-
-
-    // 1/16,000th of a second is ~62 mcsec
-    //readMicTimer.begin(readMic, 62, uSec);
-
-
-    // // send a chunk of audio every 1/2 second
-    // sendAudioTimer.begin(sendAudio, 1000, hmSec);
-
-//    audioServer.begin();
 
     lastRead = micros();
 }
@@ -238,37 +214,7 @@ void playRxAudio() {
         lastWrite = micros();
     }
 
-    //interrupts();
-}
-
-
-void listenAndSend(int delay) {
-    unsigned long startedListening = millis();
-
-    while ((millis() - startedListening) < delay) {
-        unsigned long time = micros();
-
-        if (lastRead > time) {
-            // time wrapped?
-            //lets just skip a beat for now, whatever.
-            lastRead = time;
-        }
-
-        //125 microseconds is 1/8000th of a second
-        if ((time - lastRead) > 125) {
-            lastRead = time;
-            readMic();
-        }
-    }
-    sendAudio();
-}
-
-void sendEvery(int delay) {
-    // if it's been longer than 100ms since our last broadcast, then broadcast.
-    if ((millis() - lastSend) >= delay) {
-        sendAudio();
-        lastSend = millis();
-    }
+//    interrupts();
 }
 
 // Callback for Timer 1
@@ -321,11 +267,18 @@ void copyAudio(uint8_t *bufferPtr) {
     _sendBufferLength = c - 1;
 }
 
+void sendEvery(int delay) {
+    // if it's been longer than 100ms since our last broadcast, then broadcast.
+    if ((millis() - lastSend) >= delay) {
+        sendAudio();
+        lastSend = millis();
+    }
+}
+
 void sendAudio(void) {
     copyAudio(txBuffer);
     write_UDP(txBuffer);
 }
-
 
 void write_UDP(uint8_t *buffer) {
     int stopIndex=_sendBufferLength;
