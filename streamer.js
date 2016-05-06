@@ -10,7 +10,7 @@ var toArray = require('stream-to-array');
 var server = dgram.createSocket('udp4');
 var settings = {
   UDPPort: '3444',
-  partneIP: '192.168.1.46'
+  partnerIP: '192.168.1.46'
 };
 
 var stream = udp({

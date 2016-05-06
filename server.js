@@ -10,6 +10,7 @@ var currentTime = `${d.getDate()}-${d.getMonth()}-${d.getFullYear()}--${d.getHou
 var bufferArray = [];
 
 var settings = {
+  partnerIP: '192.168.1.46',
   UDPPort: 3444
 };
 
