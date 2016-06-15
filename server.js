@@ -10,7 +10,8 @@ var currentTime = `${d.getDate()}-${d.getMonth()}-${d.getFullYear()}--${d.getHou
 var bufferArray = [];
 
 var settings = {
-  partnerIP: '192.168.1.46',
+  //partnerIP: '192.168.1.46', // 46
+  partnerIP: '172.20.10.2',
   UDPPort: 3444
 };
 
@@ -54,7 +55,7 @@ server.on('message', function (message, remote) {
     writer.write(buff);
     writer.end();
     console.log(chalk.green('•') + ' ' + chalk.green(`Recording done!\n`));
-    //playRecording(filename);
+    playRecording(filename);
     notifyPartner(remote);  
   } else if(Buffer.from('request-msg').compare(message) === 0) {
     console.log(chalk.green('• Message has been requested!'));
@@ -86,7 +87,7 @@ function notifyPartner(remote) {
       console.log(chalk.green('•')+ chalk.green(' Notification sent!\n'));
       console.log(chalk.yellow('•')+' Now waiting for user to request message...');
     });
-  }, 2000);
+  }, 2500);
 }
 
 function sendMessage(){
@@ -114,7 +115,6 @@ function sendMessage(){
 
 function sendChunk(buffer) {
   setTimeout(function(){
-    console.log('sendChunk!');
     server.send(buffer, settings.UDPPort, settings.partnerIP, function(){
     });
   }, 400);

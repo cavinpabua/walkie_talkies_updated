@@ -13,15 +13,16 @@
 #define AUDIO_BUFFER_MAX 8192
 //#define AUDIO_BUFFER_MAX 16384
 
- #define SERIAL_DEBUG_ON true
+ #define SERIAL_DEBUG_ON false
 
-#define AUDIO_TIMING_VAL 125 /* 8,000 hz */
-//#define AUDIO_TIMING_VAL 62 /* 16,000 hz */
+//#define AUDIO_TIMING_VAL 125 /* 8,000 hz */
+#define AUDIO_TIMING_VAL 62 /* 16,000 hz */
 //#define AUDIO_TIMING_VAL 50  /* 20,000 hz */
 
 UDP Udp;
 //IPAddress broadcastAddress(255,255,255,255);
-IPAddress broadcastAddress(192,168,1,37);
+//IPAddress broadcastAddress(192,168,1,39); // .37
+IPAddress broadcastAddress(172,20,10,13); // .37
 
 int audioStartIdx = 0, audioEndIdx = 0;
 int rxBufferLen = 0, rxBufferIdx = 0;
@@ -47,7 +48,7 @@ int _sendBufferLength = 0;
 unsigned int lastPublished = 0;
 bool _messageIsUnread = false;
 bool _requestedMessage = false;
-bool _readyToReceive = true;
+bool _readyToReceive = false;
 
 void setup() {
     #if SERIAL_DEBUG_ON
@@ -55,7 +56,7 @@ void setup() {
     #endif
 
     pinMode(MICROPHONE_PIN, INPUT);
-    pinMode(SPEAKER_PIN, OUTPUT);
+//    pinMode(SPEAKER_PIN, OUTPUT);
     pinMode(BUTTON_PIN, INPUT_PULLDOWN);
     pinMode(LIGHT_PIN, OUTPUT);
     pinMode(D7, OUTPUT);
@@ -119,11 +120,11 @@ int onReset(String cmd) {
     _readyToReceive = false;
 }
 
-
 void showNewMessage() {
     if (_messageIsUnread) {
         float val = (exp(sin(millis()/2000.0*M_PI)) - 0.36787944)*108.0;
         analogWrite(LIGHT_PIN, val);
+        delay(50);
     }
 }
 
@@ -143,21 +144,23 @@ void loop() {
         digitalWrite(D7, LOW);
         stopRecording();
     }
+
+
     if (Udp.parsePacket()) {
         _messageIsUnread = true;
     }
-//    showNewMessage();
+    showNewMessage();
 
-    if ( _readyToReceive ) {
-        if (!_requestedMessage) {
-           #if SERIAL_DEBUG_ON
-               Serial.print("Requesting message.");
-            #endif 
-            Udp.sendPacket("request-msg", 11, broadcastAddress, UDP_BROADCAST_PORT);        
-            _requestedMessage = true;
-        }
-        receiveMessages();
-    }
+    // if ( _readyToReceive ) {
+    //     if (!_requestedMessage) {
+    //        #if SERIAL_DEBUG_ON
+    //            Serial.print("Requesting message.");
+    //         #endif 
+    //         Udp.sendPacket("request-msg", 11, broadcastAddress, UDP_BROADCAST_PORT);        
+    //         _requestedMessage = true;
+    //     }
+    //     receiveMessages();
+    // }
 
 
 
