@@ -1,5 +1,3 @@
-
-
 #include "SparkIntervalTimer.h"
 #include "SimpleRingBuffer.h"
 #include <math.h>
@@ -19,6 +17,13 @@
 //#define AUDIO_TIMING_VAL 50  /* 20,000 hz */
 
 UDP Udp;
+/* 
+  Check your IP in ipconfig or ifconfig then set the broadcast address below.
+  Example: If your IP address is 192.168.1.14 then just change the last digit to 255 
+  resulting to 192.168.1.255 and input the address below.
+
+  Note: Make sure your walkie talkie are on the same network without AP Isolation. 
+*/
 IPAddress broadcastAddress(192,168,1,255);
 
 
