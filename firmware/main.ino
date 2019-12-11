@@ -42,7 +42,10 @@ char myIpAddress[24];
 
 
 IntervalTimer readMicTimer;
+
+/* Set Volume here. 1.0 represents 100% volume. 0.9 represents 90% and so on. */ 
 float _volumeRatio = 1.0; 
+
 int _sendBufferLength = 0;
 unsigned int lastPublished = 0;
 bool _messageIsUnread = false;
@@ -130,11 +133,12 @@ int onSetVolume(String cmd) {
 
 
 void receiveMessages() {
-     while (Udp.parsePacket() > 0) {
+    while (Udp.parsePacket() > 0) {
         while (Udp.available() > 0) {
             recv_buffer.put(Udp.read());
         }
-        if (recv_buffer.getSize() == 0) {
+        if (recv_buffer.getSize() == 0) { 
+            /* Clears speaker output if the buffer data is null */ 
             analogWrite(SPEAKER_PIN, 0);
         }
     }
@@ -142,7 +146,7 @@ void receiveMessages() {
 }
 
 void playRxAudio() {
-    unsigned long lastWrite = micros();
+  unsigned long lastWrite = micros();
 	unsigned long now, diff;
 	int value;
 
@@ -158,7 +162,7 @@ void playRxAudio() {
         if (diff < AUDIO_TIMING_VAL) {
             delayMicroseconds(AUDIO_TIMING_VAL - diff);
         }
-
+        /* This is where the audio is outputted to the Speaker */ 
         analogWrite(SPEAKER_PIN, value);
         lastWrite = micros();
     }
